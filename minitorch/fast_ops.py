@@ -168,8 +168,33 @@ def tensor_map(
         in_shape: Shape,
         in_strides: Strides,
     ) -> None:
-        # TODO: Implement for Task 3.1.
-        raise NotImplementedError("Need to implement for Task 3.1")
+        size = len(out)
+        
+        # Check if shapes have same length first
+        if len(out_shape) == len(in_shape) and len(out_strides) == len(in_strides):
+            is_contiguous = (
+                all(out_strides[i] == in_strides[i] for i in range(len(out_strides))) and
+                all(out_shape[i] == in_shape[i] for i in range(len(out_shape)))
+            )
+        else:
+            is_contiguous = False
+        
+        if is_contiguous:
+            for i in prange(size):
+                out[i] = fn(in_storage[i])
+            return
+            
+        out_index = np.empty(MAX_DIMS, np.int32)
+        in_index = np.empty(MAX_DIMS, np.int32)
+        
+        for i in prange(size):
+            to_index(i, out_shape, out_index)
+            broadcast_index(out_index, out_shape, in_shape, in_index)
+            
+            out_pos = index_to_position(out_index, out_strides)
+            in_pos = index_to_position(in_index, in_strides)
+            
+            out[out_pos] = fn(in_storage[in_pos])
 
     return njit(_map, parallel=True)  # type: ignore
 
@@ -208,8 +233,39 @@ def tensor_zip(
         b_shape: Shape,
         b_strides: Strides,
     ) -> None:
-        # TODO: Implement for Task 3.1.
-        raise NotImplementedError("Need to implement for Task 3.1")
+        size = len(out)
+        
+        # Check if shapes have same length first
+        if (len(out_shape) == len(a_shape) == len(b_shape) and 
+            len(out_strides) == len(a_strides) == len(b_strides)):
+            is_contiguous = (
+                all(out_strides[i] == a_strides[i] for i in range(len(out_strides))) and
+                all(out_strides[i] == b_strides[i] for i in range(len(out_strides))) and
+                all(out_shape[i] == a_shape[i] for i in range(len(out_shape))) and
+                all(out_shape[i] == b_shape[i] for i in range(len(out_shape)))
+            )
+        else:
+            is_contiguous = False
+        
+        if is_contiguous:
+            for i in prange(size):
+                out[i] = fn(a_storage[i], b_storage[i])
+            return
+            
+        out_index = np.empty(MAX_DIMS, np.int32)
+        a_index = np.empty(MAX_DIMS, np.int32)
+        b_index = np.empty(MAX_DIMS, np.int32)
+        
+        for i in prange(size):
+            to_index(i, out_shape, out_index)
+            broadcast_index(out_index, out_shape, a_shape, a_index)
+            broadcast_index(out_index, out_shape, b_shape, b_index)
+            
+            out_pos = index_to_position(out_index, out_strides)
+            a_pos = index_to_position(a_index, a_strides)
+            b_pos = index_to_position(b_index, b_strides)
+            
+            out[out_pos] = fn(a_storage[a_pos], b_storage[b_pos])
 
     return njit(_zip, parallel=True)  # type: ignore
 
@@ -244,8 +300,24 @@ def tensor_reduce(
         a_strides: Strides,
         reduce_dim: int,
     ) -> None:
-        # TODO: Implement for Task 3.1.
-        raise NotImplementedError("Need to implement for Task 3.1")
+        out_index = np.empty(MAX_DIMS, np.int32)
+        a_index = np.empty(MAX_DIMS, np.int32)
+        
+        size = len(out)
+        reduce_size = a_shape[reduce_dim]
+        
+        for i in prange(size):
+            to_index(i, out_shape, out_index)
+            
+            for j in range(len(out_index)):
+                a_index[j] = out_index[j]
+            
+            out_pos = index_to_position(out_index, out_strides)
+            
+            for j in range(reduce_size):
+                a_index[reduce_dim] = j
+                a_pos = index_to_position(a_index, a_strides)
+                out[out_pos] = fn(out[out_pos], a_storage[a_pos])
 
     return njit(_reduce, parallel=True)  # type: ignore
 
