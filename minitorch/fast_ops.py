@@ -377,7 +377,38 @@ def _tensor_matrix_multiply(
     b_batch_stride = b_strides[0] if b_shape[0] > 1 else 0
 
     # TODO: Implement for Task 3.2.
-    raise NotImplementedError("Need to implement for Task 3.2")
+    # Get matrix dimensions
+    batch_size = out_shape[0]
+    M = out_shape[1]  # rows in output
+    N = out_shape[2]  # cols in output
+    K = a_shape[2]    # cols in a, rows in b
+    
+    # Parallel loop over batches and rows
+    for batch in prange(batch_size):
+        for i in range(M):
+            # Calculate batch offsets
+            a_batch_offset = batch * a_batch_stride
+            b_batch_offset = batch * b_batch_stride
+            out_batch_offset = batch * out_strides[0]
+            
+            for j in range(N):
+                # Calculate output position
+                out_pos = out_batch_offset + i * out_strides[1] + j * out_strides[2]
+                
+                # Initialize accumulator
+                acc = 0.0
+                
+                # Inner product loop
+                for k in range(K):
+                    # Calculate positions in a and b
+                    a_pos = a_batch_offset + i * a_strides[1] + k * a_strides[2]
+                    b_pos = b_batch_offset + k * b_strides[1] + j * b_strides[2]
+                    
+                    # Multiply and accumulate
+                    acc += a_storage[a_pos] * b_storage[b_pos]
+                
+                # Store result
+                out[out_pos] = acc
 
 
 tensor_matrix_multiply = njit(_tensor_matrix_multiply, parallel=True)
