@@ -292,11 +292,19 @@ def _sum_practice(out: Storage, a: Storage, size: int) -> None:
     
     # Write result
     if pos == 0:
+        # Each block writes its partial sum
         out[cuda.blockIdx.x] = cache[0]
+        
+        # First block combines all partial sums
         if cuda.blockIdx.x == 0:
+            # Initialize with first block's sum
             total = cache[0]
-            for j in range(1, (size + BLOCK_DIM - 1) // BLOCK_DIM):
+            # Number of blocks needed
+            num_blocks = (size + BLOCK_DIM - 1) // BLOCK_DIM
+            # Add sums from other blocks
+            for j in range(1, num_blocks):
                 total += out[j]
+            # Write final sum
             out[0] = total
 
 
