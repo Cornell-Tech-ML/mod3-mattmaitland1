@@ -170,23 +170,27 @@ def tensor_map(
     ) -> None:
         size = len(out)
         
-        # Check if shapes have same length first
-        if len(out_shape) == len(in_shape) and len(out_strides) == len(in_strides):
-            is_contiguous = (
-                all(out_strides[i] == in_strides[i] for i in range(len(out_strides))) and
-                all(out_shape[i] == in_shape[i] for i in range(len(out_shape)))
-            )
-        else:
+        # Check if shapes and strides match using simple loops
+        is_contiguous = True
+        if len(out_shape) != len(in_shape):
             is_contiguous = False
+        else:
+            for i in range(len(out_shape)):
+                if out_shape[i] != in_shape[i] or out_strides[i] != in_strides[i]:
+                    is_contiguous = False
+                    break
         
+        # Fast path for contiguous tensors
         if is_contiguous:
             for i in prange(size):
                 out[i] = fn(in_storage[i])
             return
             
+        # Create reusable index buffers
         out_index = np.empty(MAX_DIMS, np.int32)
         in_index = np.empty(MAX_DIMS, np.int32)
         
+        # Main parallel loop
         for i in prange(size):
             to_index(i, out_shape, out_index)
             broadcast_index(out_index, out_shape, in_shape, in_index)
@@ -235,27 +239,31 @@ def tensor_zip(
     ) -> None:
         size = len(out)
         
-        # Check if shapes have same length first
-        if (len(out_shape) == len(a_shape) == len(b_shape) and 
-            len(out_strides) == len(a_strides) == len(b_strides)):
-            is_contiguous = (
-                all(out_strides[i] == a_strides[i] for i in range(len(out_strides))) and
-                all(out_strides[i] == b_strides[i] for i in range(len(out_strides))) and
-                all(out_shape[i] == a_shape[i] for i in range(len(out_shape))) and
-                all(out_shape[i] == b_shape[i] for i in range(len(out_shape)))
-            )
-        else:
+        # Check if shapes and strides match using simple loops
+        is_contiguous = True
+        if len(out_shape) != len(a_shape) or len(out_shape) != len(b_shape):
             is_contiguous = False
+        else:
+            for i in range(len(out_shape)):
+                if (out_shape[i] != a_shape[i] or 
+                    out_shape[i] != b_shape[i] or
+                    out_strides[i] != a_strides[i] or 
+                    out_strides[i] != b_strides[i]):
+                    is_contiguous = False
+                    break
         
+        # Fast path for contiguous tensors
         if is_contiguous:
             for i in prange(size):
                 out[i] = fn(a_storage[i], b_storage[i])
             return
             
+        # Create reusable index buffers
         out_index = np.empty(MAX_DIMS, np.int32)
         a_index = np.empty(MAX_DIMS, np.int32)
         b_index = np.empty(MAX_DIMS, np.int32)
         
+        # Main parallel loop
         for i in prange(size):
             to_index(i, out_shape, out_index)
             broadcast_index(out_index, out_shape, a_shape, a_index)
