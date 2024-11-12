@@ -275,37 +275,24 @@ def _sum_practice(out: Storage, a: Storage, size: int) -> None:
     i = cuda.blockIdx.x * cuda.blockDim.x + cuda.threadIdx.x
     pos = cuda.threadIdx.x
 
-    # Initialize cache
-    cache[pos] = 0.0
     if i < size:
         cache[pos] = a[i]
-    
-    cuda.syncthreads()
-    
-    # Parallel reduction in shared memory
-    stride = BLOCK_DIM // 2
-    while stride > 0:
-        if pos < stride:
-            cache[pos] += cache[pos + stride]
-        cuda.syncthreads()
-        stride //= 2
-    
-    # Write result
+    else:
+        cache[pos] = 0.0  # Padding for out-of-bounds
+
+    cuda.syncthreads()  
+
+    stride = 1
+    while stride < BLOCK_DIM:
+        if pos % (2 * stride) == 0:
+            cache[pos] += cache[pos + stride]  # Sum pairs of elements
+        stride *= 2
+        cuda.syncthreads()  
+
     if pos == 0:
-        # Each block writes its partial sum
         out[cuda.blockIdx.x] = cache[0]
-        
-        # First block combines all partial sums
-        if cuda.blockIdx.x == 0:
-            # Initialize with first block's sum
-            total = cache[0]
-            # Number of blocks needed
-            num_blocks = (size + BLOCK_DIM - 1) // BLOCK_DIM
-            # Add sums from other blocks
-            for j in range(1, num_blocks):
-                total += out[j]
-            # Write final sum
-            out[0] = total
+
+    # raise NotImplementedError("Need to implement for Task 3.3")
 
 
 jit_sum_practice = cuda.jit()(_sum_practice)
