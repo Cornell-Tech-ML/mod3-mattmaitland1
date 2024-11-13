@@ -311,38 +311,36 @@ def tensor_reduce(
         # Create index buffers outside the loop
         out_index = np.empty(MAX_DIMS, np.int32)
         a_index = np.empty(MAX_DIMS, np.int32)
-
-        # Calculate total elements
+        
+        # Calculate output size
+        size = len(out_shape)
         out_size = 1
-        for i in range(len(out_shape)):
+        for i in range(size):
             out_size *= out_shape[i]
 
-        # Get reduction size
-        reduce_size = a_shape[reduce_dim]
-
-        # Main parallel loop
+        # Main parallel loop over output positions
         for i in prange(out_size):
-            # Get output index and position
+            # Convert position to indices
             to_index(i, out_shape, out_index)
-            out_pos = index_to_position(out_index, out_strides)
+            o_pos = index_to_position(out_index, out_strides)
 
-            # Initialize input index
-            for j in range(len(out_shape)):
+            # Copy output index to a_index
+            for j in range(size):
                 a_index[j] = out_index[j]
-            
-            # Get first value
-            a_index[reduce_dim] = 0
-            a_pos = index_to_position(a_index, a_strides)
-            acc = a_storage[a_pos]
 
-            # Reduce remaining values
-            for j in range(1, reduce_size):
+            # Initialize reduction with first element
+            a_index[reduce_dim] = 0
+            pos = index_to_position(a_index, a_strides)
+            reduced = a_storage[pos]
+
+            # Inner reduction loop
+            for j in range(1, a_shape[reduce_dim]):
                 a_index[reduce_dim] = j
-                a_pos = index_to_position(a_index, a_strides)
-                acc = fn(acc, a_storage[a_pos])
+                pos = index_to_position(a_index, a_strides)
+                reduced = fn(reduced, a_storage[pos])
 
             # Store result
-            out[out_pos] = acc
+            out[o_pos] = reduced
 
     return njit(_reduce, parallel=True)  # type: ignore
 
