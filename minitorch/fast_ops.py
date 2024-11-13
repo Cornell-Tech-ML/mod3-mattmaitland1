@@ -168,8 +168,27 @@ def tensor_map(
         in_shape: Shape,
         in_strides: Strides,
     ) -> None:
-        # TODO: Implement for Task 3.1.
-        raise NotImplementedError("Need to implement for Task 3.1")
+        # Create numpy buffer for indices
+        index_buffer = np.empty(MAX_DIMS, np.int32)
+        size = len(out)
+
+        # Check if tensors are stride-aligned
+        is_aligned = True
+        for i in range(len(out_strides)):
+            if out_strides[i] != in_strides[i] or out_shape[i] != in_shape[i]:
+                is_aligned = False
+                break
+
+        # Main parallel loop
+        if is_aligned:
+            for i in prange(size):
+                out[i] = fn(in_storage[i])
+        else:
+            for i in prange(size):
+                to_index(i, out_shape, index_buffer)
+                out_pos = index_to_position(index_buffer, out_strides)
+                in_pos = index_to_position(index_buffer, in_strides)
+                out[out_pos] = fn(in_storage[in_pos])
 
     return njit(_map, parallel=True)  # type: ignore
 
