@@ -221,28 +221,27 @@ def tensor_zip(
         b_shape: Shape,
         b_strides: Strides,
     ) -> None:
-        # Replace this with your implementation
-        index_buffer = np.empty(MAX_DIMS, np.int32)
-        size = len(out)
-
-        is_aligned = True
-        for i in range(len(out_strides)):
-            if (out_strides[i] != a_strides[i] or 
-                out_strides[i] != b_strides[i] or
-                out_shape[i] != a_shape[i] or 
-                out_shape[i] != b_shape[i]):
-                is_aligned = False
-                break
-
-        if is_aligned:
-            for i in prange(size):
-                out[i] = fn(a_storage[i], b_storage[i])
-        else:
-            for i in prange(size):
-                to_index(i, out_shape, index_buffer)
-                a_pos = index_to_position(index_buffer, a_strides)
-                b_pos = index_to_position(index_buffer, b_strides)
-                out[index_to_position(index_buffer, out_strides)] = fn(a_storage[a_pos], b_storage[b_pos])
+        # Create index buffers with correct sizes
+        out_index = np.zeros(len(out_shape), np.int32)
+        a_index = np.zeros(len(a_shape), np.int32)
+        b_index = np.zeros(len(b_shape), np.int32)
+        
+        # Main parallel loop
+        for i in prange(len(out)):
+            # Convert position i to indices
+            to_index(i, out_shape, out_index)
+            o = index_to_position(out_index, out_strides)
+            
+            # Handle broadcasting for first input
+            broadcast_index(out_index, out_shape, a_shape, a_index)
+            j = index_to_position(a_index, a_strides)
+            
+            # Handle broadcasting for second input
+            broadcast_index(out_index, out_shape, b_shape, b_index)
+            k = index_to_position(b_index, b_strides)
+            
+            # Apply binary function
+            out[o] = fn(a_storage[j], b_storage[k])
 
     return njit(_zip, parallel=True)  # type: ignore
 
