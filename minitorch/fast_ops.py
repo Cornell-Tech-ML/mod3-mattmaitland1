@@ -177,21 +177,17 @@ def tensor_map(
                 out[i] = fn(in_storage[i])
             return
 
-        # Slow path - create index buffers
+        # Slow path w buffers
         out_index = np.zeros(len(out_shape), np.int32)
         in_index = np.zeros(len(in_shape), np.int32)
         
-        # Main parallel loop
         for i in prange(len(out)):
-            # Convert position to indices
             to_index(i, out_shape, out_index)
             broadcast_index(out_index, out_shape, in_shape, in_index)
             
-            # Get positions
             o = index_to_position(out_index, out_strides)
             j = index_to_position(in_index, in_strides)
             
-            # Apply function
             out[o] = fn(in_storage[j])
 
     return njit(_map, parallel=True)  # type: ignore
@@ -231,8 +227,38 @@ def tensor_zip(
         b_shape: Shape,
         b_strides: Strides,
     ) -> None:
-        # Create index buffers with correct sizes
-        raise NotImplementedError("Need to implement for Task 3.1")
+        # Fast path if stride-aligned
+        if (len(out_strides) == len(a_strides) == len(b_strides)
+            and np.array_equal(out_strides, a_strides)
+            and np.array_equal(out_strides, b_strides)
+            and np.array_equal(out_shape, a_shape)
+            and np.array_equal(out_shape, b_shape)):
+            # Apply function 
+            for i in prange(len(out)):
+                out[i] = fn(a_storage[i], b_storage[i])
+            return
+
+        # Slow path w buffers
+        out_index = np.zeros(len(out_shape), np.int32)
+        a_index = np.zeros(len(a_shape), np.int32)
+        b_index = np.zeros(len(b_shape), np.int32)
+        
+        # Main parallel loop
+        for i in prange(len(out)):
+            # Convert position to indices
+            to_index(i, out_shape, out_index)
+            
+            # Map output index to input indices (handles broadcasting)
+            broadcast_index(out_index, out_shape, a_shape, a_index)
+            broadcast_index(out_index, out_shape, b_shape, b_index)
+            
+            # Get positions
+            o = index_to_position(out_index, out_strides)
+            j = index_to_position(a_index, a_strides)
+            k = index_to_position(b_index, b_strides)
+            
+            # Apply function
+            out[o] = fn(a_storage[j], b_storage[k])
 
     return njit(_zip, parallel=True)  # type: ignore
 
