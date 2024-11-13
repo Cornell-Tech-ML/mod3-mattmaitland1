@@ -227,7 +227,7 @@ def tensor_zip(
         b_shape: Shape,
         b_strides: Strides,
     ) -> None:
-        # Fast path check
+        # Fast path for aligned tensors
         if (len(out_strides) == len(a_strides) == len(b_strides)
             and np.array_equal(out_strides, a_strides)
             and np.array_equal(out_strides, b_strides)
@@ -237,28 +237,35 @@ def tensor_zip(
                 out[i] = fn(a_storage[i], b_storage[i])
             return
 
-        # Calculate total size
-        size = len(out_shape)
-        out_size = 1
-        for i in range(size):
-            out_size *= out_shape[i]
+        # Calculate total elements
+        total_size = 1
+        for dim in range(len(out_shape)):
+            total_size *= out_shape[dim]
 
-        # Main parallel loop with per-thread buffers
-        for i in prange(out_size):
-            out_index = np.empty(len(out_shape), np.int32)
-            a_index = np.empty(len(out_shape), np.int32)
-            b_index = np.empty(len(out_shape), np.int32)
+        # Main parallel loop
+        for i in prange(total_size):
+            # Create thread-local index buffers
+            out_idx = np.empty(len(out_shape), np.int32)
+            a_idx = np.empty(len(out_shape), np.int32)
+            b_idx = np.empty(len(out_shape), np.int32)
 
-            to_index(i, out_shape, out_index)
-            o_pos = index_to_position(out_index, out_strides)
-            broadcast_index(out_index, out_shape, a_shape, a_index)
-            a_pos = index_to_position(a_index, a_strides)
-            broadcast_index(out_index, out_shape, b_shape, b_index)
-            b_pos = index_to_position(b_index, b_strides)
+            # Convert flat index to coordinates
+            to_index(i, out_shape, out_idx)
             
-            out[o_pos] = fn(a_storage[a_pos], b_storage[b_pos])
+            # Get output position
+            out_pos = index_to_position(out_idx, out_strides)
+            
+            # Handle broadcasting and get input positions
+            broadcast_index(out_idx, out_shape, a_shape, a_idx)
+            a_pos = index_to_position(a_idx, a_strides)
+            
+            broadcast_index(out_idx, out_shape, b_shape, b_idx)
+            b_pos = index_to_position(b_idx, b_strides)
+            
+            # Apply function
+            out[out_pos] = fn(a_storage[a_pos], b_storage[b_pos])
 
-    return njit(_zip, parallel=True)  # type: ignore
+    return njit(_zip, parallel=True)
 
 
 def tensor_reduce(
@@ -291,7 +298,38 @@ def tensor_reduce(
         a_strides: Strides,
         reduce_dim: int,
     ) -> None:
-        raise NotImplementedError("Need to implement for Task 3.1")
+        # Get total elements to process
+        total = 1
+        ndim = len(out_shape)
+        for i in range(ndim):
+            total *= out_shape[i]
+
+        # Process each output position in parallel
+        for i in prange(total):
+            # Create per-thread buffers
+            out_idx = np.empty(ndim, np.int32)
+            a_idx = np.empty(ndim, np.int32)
+
+            # Map to output position
+            to_index(i, out_shape, out_idx)
+            out_pos = index_to_position(out_idx, out_strides)
+
+            # Setup input index
+            for j in range(ndim):
+                a_idx[j] = out_idx[j]
+
+            # First element
+            a_idx[reduce_dim] = 0
+            curr_pos = index_to_position(a_idx, a_strides)
+            acc = a_storage[curr_pos]
+
+            # Reduce remaining
+            for j in range(1, a_shape[reduce_dim]):
+                a_idx[reduce_dim] = j
+                curr_pos = index_to_position(a_idx, a_strides)
+                acc = fn(acc, a_storage[curr_pos])
+
+            out[out_pos] = acc
 
     return njit(_reduce, parallel=True)  # type: ignore
 
