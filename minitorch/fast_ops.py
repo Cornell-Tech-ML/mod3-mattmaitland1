@@ -308,28 +308,33 @@ def tensor_reduce(
         a_strides: Strides,
         reduce_dim: int,
     ) -> None:
+        # Use numpy buffers for indices
         out_index = np.empty(MAX_DIMS, np.int32)
         a_index = np.empty(MAX_DIMS, np.int32)
         
         size = len(out)
         reduce_size = a_shape[reduce_dim]
         
+        # Main loop in parallel
         for i in prange(size):
+            # Calculate output index
             to_index(i, out_shape, out_index)
-            
-            # Initialize output position
             out_pos = index_to_position(out_index, out_strides)
-            out[out_pos] = 0.0  # Initialize accumulator
             
-            # Copy output index to input index
+            # Copy index for input
             for j in range(len(out_index)):
                 a_index[j] = out_index[j]
             
-            # Reduce over the reduction dimension
-            for j in range(reduce_size):
+            # Initialize accumulator
+            acc = a_storage[index_to_position(a_index, a_strides)]
+            
+            # Inner reduction loop - no function calls or non-local writes
+            for j in range(1, reduce_size):
                 a_index[reduce_dim] = j
-                a_pos = index_to_position(a_index, a_strides)
-                out[out_pos] = fn(out[out_pos], a_storage[a_pos])
+                acc = fn(acc, a_storage[index_to_position(a_index, a_strides)])
+            
+            # Write final result
+            out[out_pos] = acc
 
     return njit(_reduce, parallel=True)  # type: ignore
 
