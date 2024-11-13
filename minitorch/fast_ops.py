@@ -168,19 +168,29 @@ def tensor_map(
         in_shape: Shape,
         in_strides: Strides,
     ) -> None:
-        # Create index buffers with correct sizes
+        # Fast path if stride-aligned
+        if (len(out_strides) == len(in_strides)
+            and np.array_equal(out_strides, in_strides)
+            and np.array_equal(out_shape, in_shape)):
+            # Apply function directly using aligned indices
+            for i in prange(len(out)):
+                out[i] = fn(in_storage[i])
+            return
+
+        # Slow path - create index buffers
         out_index = np.zeros(len(out_shape), np.int32)
         in_index = np.zeros(len(in_shape), np.int32)
         
         # Main parallel loop
         for i in prange(len(out)):
-            # Convert position i to indices
+            # Convert position to indices
             to_index(i, out_shape, out_index)
-            # Handle broadcasting
             broadcast_index(out_index, out_shape, in_shape, in_index)
+            
             # Get positions
             o = index_to_position(out_index, out_strides)
             j = index_to_position(in_index, in_strides)
+            
             # Apply function
             out[o] = fn(in_storage[j])
 
