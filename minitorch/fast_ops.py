@@ -168,27 +168,21 @@ def tensor_map(
         in_shape: Shape,
         in_strides: Strides,
     ) -> None:
-        # Create numpy buffer for indices
-        index_buffer = np.empty(MAX_DIMS, np.int32)
-        size = len(out)
-
-        # Check if tensors are stride-aligned
-        is_aligned = True
-        for i in range(len(out_strides)):
-            if out_strides[i] != in_strides[i] or out_shape[i] != in_shape[i]:
-                is_aligned = False
-                break
-
+        # Create index buffers with correct sizes
+        out_index = np.zeros(len(out_shape), np.int32)
+        in_index = np.zeros(len(in_shape), np.int32)
+        
         # Main parallel loop
-        if is_aligned:
-            for i in prange(size):
-                out[i] = fn(in_storage[i])
-        else:
-            for i in prange(size):
-                to_index(i, out_shape, index_buffer)
-                out_pos = index_to_position(index_buffer, out_strides)
-                in_pos = index_to_position(index_buffer, in_strides)
-                out[out_pos] = fn(in_storage[in_pos])
+        for i in prange(len(out)):
+            # Convert position i to indices
+            to_index(i, out_shape, out_index)
+            # Handle broadcasting
+            broadcast_index(out_index, out_shape, in_shape, in_index)
+            # Get positions
+            o = index_to_position(out_index, out_strides)
+            j = index_to_position(in_index, in_strides)
+            # Apply function
+            out[o] = fn(in_storage[j])
 
     return njit(_map, parallel=True)  # type: ignore
 
