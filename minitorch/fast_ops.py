@@ -312,36 +312,37 @@ def tensor_reduce(
         out_index = np.empty(MAX_DIMS, np.int32)
         a_index = np.empty(MAX_DIMS, np.int32)
 
-        # Calculate total output elements
-        output_size = 1
-        for s in out_shape:
-            output_size *= s
+        # Calculate total elements
+        out_size = 1
+        for i in range(len(out_shape)):
+            out_size *= out_shape[i]
 
-        # Get reduction dimension size
+        # Get reduction size
         reduce_size = a_shape[reduce_dim]
-        
+
         # Main parallel loop
-        for idx in prange(output_size):
-            # Get output position
-            to_index(idx, out_shape, out_index)
-            out_position = index_to_position(out_index, out_strides)
-            
-            # Set up input index
-            for dim in range(len(a_shape)):
-                a_index[dim] = out_index[dim]
+        for i in prange(out_size):
+            # Get output index and position
+            to_index(i, out_shape, out_index)
+            out_pos = index_to_position(out_index, out_strides)
+
+            # Initialize input index
+            for j in range(len(out_shape)):
+                a_index[j] = out_index[j]
             
             # Get first value
             a_index[reduce_dim] = 0
-            curr_value = a_storage[index_to_position(a_index, a_strides)]
-            
-            # Reduce along dimension
-            for r in range(1, reduce_size):
-                a_index[reduce_dim] = r
-                input_position = index_to_position(a_index, a_strides)
-                curr_value = fn(curr_value, a_storage[input_position])
-            
+            a_pos = index_to_position(a_index, a_strides)
+            acc = a_storage[a_pos]
+
+            # Reduce remaining values
+            for j in range(1, reduce_size):
+                a_index[reduce_dim] = j
+                a_pos = index_to_position(a_index, a_strides)
+                acc = fn(acc, a_storage[a_pos])
+
             # Store result
-            out[out_position] = curr_value
+            out[out_pos] = acc
 
     return njit(_reduce, parallel=True)  # type: ignore
 
