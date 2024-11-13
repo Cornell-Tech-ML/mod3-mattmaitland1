@@ -322,7 +322,13 @@ def tensor_reduce(
             
             out_pos = index_to_position(out_index, out_strides)
             
-            for j in range(reduce_size):
+            # Initialize accumulator with first value
+            a_index[reduce_dim] = 0
+            a_pos = index_to_position(a_index, a_strides)
+            out[out_pos] = a_storage[a_pos]
+            
+            # Reduce remaining values
+            for j in range(1, reduce_size):
                 a_index[reduce_dim] = j
                 a_pos = index_to_position(a_index, a_strides)
                 out[out_pos] = fn(out[out_pos], a_storage[a_pos])
