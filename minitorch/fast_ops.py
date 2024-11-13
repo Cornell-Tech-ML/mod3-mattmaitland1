@@ -222,26 +222,7 @@ def tensor_zip(
         b_strides: Strides,
     ) -> None:
         # Create index buffers with correct sizes
-        out_index = np.zeros(len(out_shape), np.int32)
-        a_index = np.zeros(len(a_shape), np.int32)
-        b_index = np.zeros(len(b_shape), np.int32)
-        
-        # Main parallel loop
-        for i in prange(len(out)):
-            # Convert position i to indices
-            to_index(i, out_shape, out_index)
-            o = index_to_position(out_index, out_strides)
-            
-            # Handle broadcasting for first input
-            broadcast_index(out_index, out_shape, a_shape, a_index)
-            j = index_to_position(a_index, a_strides)
-            
-            # Handle broadcasting for second input
-            broadcast_index(out_index, out_shape, b_shape, b_index)
-            k = index_to_position(b_index, b_strides)
-            
-            # Apply binary function
-            out[o] = fn(a_storage[j], b_storage[k])
+        raise NotImplementedError("Need to implement for Task 3.1")
 
     return njit(_zip, parallel=True)  # type: ignore
 
