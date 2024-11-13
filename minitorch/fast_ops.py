@@ -317,18 +317,16 @@ def tensor_reduce(
         for i in prange(size):
             to_index(i, out_shape, out_index)
             
+            # Initialize output position
+            out_pos = index_to_position(out_index, out_strides)
+            out[out_pos] = 0.0  # Initialize accumulator
+            
+            # Copy output index to input index
             for j in range(len(out_index)):
                 a_index[j] = out_index[j]
             
-            out_pos = index_to_position(out_index, out_strides)
-            
-            # Initialize accumulator with first value
-            a_index[reduce_dim] = 0
-            a_pos = index_to_position(a_index, a_strides)
-            out[out_pos] = a_storage[a_pos]
-            
-            # Reduce remaining values
-            for j in range(1, reduce_size):
+            # Reduce over the reduction dimension
+            for j in range(reduce_size):
                 a_index[reduce_dim] = j
                 a_pos = index_to_position(a_index, a_strides)
                 out[out_pos] = fn(out[out_pos], a_storage[a_pos])
