@@ -168,37 +168,8 @@ def tensor_map(
         in_shape: Shape,
         in_strides: Strides,
     ) -> None:
-        size = len(out)
-        
-        # Check if shapes and strides match using simple loops
-        is_contiguous = True
-        if len(out_shape) != len(in_shape):
-            is_contiguous = False
-        else:
-            for i in range(len(out_shape)):
-                if out_shape[i] != in_shape[i] or out_strides[i] != in_strides[i]:
-                    is_contiguous = False
-                    break
-        
-        # Fast path for contiguous tensors
-        if is_contiguous:
-            for i in prange(size):
-                out[i] = fn(in_storage[i])
-            return
-            
-        # Create reusable index buffers
-        out_index = np.empty(MAX_DIMS, np.int32)
-        in_index = np.empty(MAX_DIMS, np.int32)
-        
-        # Main parallel loop
-        for i in prange(size):
-            to_index(i, out_shape, out_index)
-            broadcast_index(out_index, out_shape, in_shape, in_index)
-            
-            out_pos = index_to_position(out_index, out_strides)
-            in_pos = index_to_position(in_index, in_strides)
-            
-            out[out_pos] = fn(in_storage[in_pos])
+        # TODO: Implement for Task 3.1.
+        raise NotImplementedError("Need to implement for Task 3.1")
 
     return njit(_map, parallel=True)  # type: ignore
 
@@ -237,43 +208,8 @@ def tensor_zip(
         b_shape: Shape,
         b_strides: Strides,
     ) -> None:
-        size = len(out)
-        
-        # Check if shapes and strides match using simple loops
-        is_contiguous = True
-        if len(out_shape) != len(a_shape) or len(out_shape) != len(b_shape):
-            is_contiguous = False
-        else:
-            for i in range(len(out_shape)):
-                if (out_shape[i] != a_shape[i] or 
-                    out_shape[i] != b_shape[i] or
-                    out_strides[i] != a_strides[i] or 
-                    out_strides[i] != b_strides[i]):
-                    is_contiguous = False
-                    break
-        
-        # Fast path for contiguous tensors
-        if is_contiguous:
-            for i in prange(size):
-                out[i] = fn(a_storage[i], b_storage[i])
-            return
-            
-        # Create reusable index buffers
-        out_index = np.empty(MAX_DIMS, np.int32)
-        a_index = np.empty(MAX_DIMS, np.int32)
-        b_index = np.empty(MAX_DIMS, np.int32)
-        
-        # Main parallel loop
-        for i in prange(size):
-            to_index(i, out_shape, out_index)
-            broadcast_index(out_index, out_shape, a_shape, a_index)
-            broadcast_index(out_index, out_shape, b_shape, b_index)
-            
-            out_pos = index_to_position(out_index, out_strides)
-            a_pos = index_to_position(a_index, a_strides)
-            b_pos = index_to_position(b_index, b_strides)
-            
-            out[out_pos] = fn(a_storage[a_pos], b_storage[b_pos])
+        # TODO: Implement for Task 3.1.
+        raise NotImplementedError("Need to implement for Task 3.1")
 
     return njit(_zip, parallel=True)  # type: ignore
 
@@ -308,39 +244,8 @@ def tensor_reduce(
         a_strides: Strides,
         reduce_dim: int,
     ) -> None:
-        # Create index buffers outside the loop
-        out_index = np.empty(MAX_DIMS, np.int32)
-        a_index = np.empty(MAX_DIMS, np.int32)
-        
-        # Calculate output size
-        size = len(out_shape)
-        out_size = 1
-        for i in range(size):
-            out_size *= out_shape[i]
-
-        # Main parallel loop over output positions
-        for i in prange(out_size):
-            # Convert position to indices
-            to_index(i, out_shape, out_index)
-            o_pos = index_to_position(out_index, out_strides)
-
-            # Copy output index to a_index
-            for j in range(size):
-                a_index[j] = out_index[j]
-
-            # Initialize reduction with first element
-            a_index[reduce_dim] = 0
-            pos = index_to_position(a_index, a_strides)
-            reduced = a_storage[pos]
-
-            # Inner reduction loop
-            for j in range(1, a_shape[reduce_dim]):
-                a_index[reduce_dim] = j
-                pos = index_to_position(a_index, a_strides)
-                reduced = fn(reduced, a_storage[pos])
-
-            # Store result
-            out[o_pos] = reduced
+        # TODO: Implement for Task 3.1.
+        raise NotImplementedError("Need to implement for Task 3.1")
 
     return njit(_reduce, parallel=True)  # type: ignore
 
@@ -392,38 +297,7 @@ def _tensor_matrix_multiply(
     b_batch_stride = b_strides[0] if b_shape[0] > 1 else 0
 
     # TODO: Implement for Task 3.2.
-    # Get matrix dimensions
-    batch_size = out_shape[0]
-    M = out_shape[1]  # rows in output
-    N = out_shape[2]  # cols in output
-    K = a_shape[2]    # cols in a, rows in b
-    
-    # Parallel loop over batches and rows
-    for batch in prange(batch_size):
-        for i in range(M):
-            # Calculate batch offsets
-            a_batch_offset = batch * a_batch_stride
-            b_batch_offset = batch * b_batch_stride
-            out_batch_offset = batch * out_strides[0]
-            
-            for j in range(N):
-                # Calculate output position
-                out_pos = out_batch_offset + i * out_strides[1] + j * out_strides[2]
-                
-                # Initialize accumulator
-                acc = 0.0
-                
-                # Inner product loop
-                for k in range(K):
-                    # Calculate positions in a and b
-                    a_pos = a_batch_offset + i * a_strides[1] + k * a_strides[2]
-                    b_pos = b_batch_offset + k * b_strides[1] + j * b_strides[2]
-                    
-                    # Multiply and accumulate
-                    acc += a_storage[a_pos] * b_storage[b_pos]
-                
-                # Store result
-                out[out_pos] = acc
+    raise NotImplementedError("Need to implement for Task 3.2")
 
 
 tensor_matrix_multiply = njit(_tensor_matrix_multiply, parallel=True)
