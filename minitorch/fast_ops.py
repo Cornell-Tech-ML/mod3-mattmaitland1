@@ -227,38 +227,36 @@ def tensor_zip(
         b_shape: Shape,
         b_strides: Strides,
     ) -> None:
-        # Fast path if stride-aligned
+        # Fast path check
         if (len(out_strides) == len(a_strides) == len(b_strides)
             and np.array_equal(out_strides, a_strides)
             and np.array_equal(out_strides, b_strides)
             and np.array_equal(out_shape, a_shape)
             and np.array_equal(out_shape, b_shape)):
-            # Apply function 
             for i in prange(len(out)):
                 out[i] = fn(a_storage[i], b_storage[i])
             return
 
-        # Slow path w buffers
-        out_index = np.zeros(len(out_shape), np.int32)
-        a_index = np.zeros(len(a_shape), np.int32)
-        b_index = np.zeros(len(b_shape), np.int32)
-        
-        # Main parallel loop
-        for i in prange(len(out)):
-            # Convert position to indices
+        # Calculate total size
+        size = len(out_shape)
+        out_size = 1
+        for i in range(size):
+            out_size *= out_shape[i]
+
+        # Main parallel loop with per-thread buffers
+        for i in prange(out_size):
+            out_index = np.empty(len(out_shape), np.int32)
+            a_index = np.empty(len(out_shape), np.int32)
+            b_index = np.empty(len(out_shape), np.int32)
+
             to_index(i, out_shape, out_index)
-            
-            # Map output index to input indices (handles broadcasting)
+            o_pos = index_to_position(out_index, out_strides)
             broadcast_index(out_index, out_shape, a_shape, a_index)
+            a_pos = index_to_position(a_index, a_strides)
             broadcast_index(out_index, out_shape, b_shape, b_index)
+            b_pos = index_to_position(b_index, b_strides)
             
-            # Get positions
-            o = index_to_position(out_index, out_strides)
-            j = index_to_position(a_index, a_strides)
-            k = index_to_position(b_index, b_strides)
-            
-            # Apply function
-            out[o] = fn(a_storage[j], b_storage[k])
+            out[o_pos] = fn(a_storage[a_pos], b_storage[b_pos])
 
     return njit(_zip, parallel=True)  # type: ignore
 
