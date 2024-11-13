@@ -276,35 +276,7 @@ def tensor_reduce(
         a_strides: Strides,
         reduce_dim: int,
     ) -> None:
-        index_buffer = np.empty(MAX_DIMS, np.int32)
-        a_index = np.empty(MAX_DIMS, np.int32)
-        
-        # Calculate output size
-        size = len(out)
-        reduce_size = a_shape[reduce_dim]
-
-        # Main parallel loop
-        for i in prange(size):
-            # Get output index
-            to_index(i, out_shape, index_buffer)
-            out_pos = index_to_position(index_buffer, out_strides)
-            
-            # Copy index for input
-            for j in range(len(out_shape)):
-                a_index[j] = index_buffer[j]
-            
-            # Get first value
-            a_index[reduce_dim] = 0
-            in_pos = index_to_position(a_index, a_strides)
-            acc = a_storage[in_pos]
-            
-            # Inner reduction loop
-            for j in range(1, reduce_size):
-                a_index[reduce_dim] = j
-                in_pos = index_to_position(a_index, a_strides)
-                acc = fn(acc, a_storage[in_pos])
-            
-            out[out_pos] = acc
+        raise NotImplementedError("Need to implement for Task 3.1")
 
     return njit(_reduce, parallel=True)  # type: ignore
 
