@@ -298,39 +298,7 @@ def tensor_reduce(
         a_strides: Strides,
         reduce_dim: int,
     ) -> None:
-        # Get total elements to process
-        total = 1
-        ndim = len(out_shape)
-        for i in range(ndim):
-            total *= out_shape[i]
-
-        # Process each output position in parallel
-        for i in prange(total):
-            # Create per-thread buffers
-            out_idx = np.empty(ndim, np.int32)
-            a_idx = np.empty(ndim, np.int32)
-
-            # Map to output position
-            to_index(i, out_shape, out_idx)
-            out_pos = index_to_position(out_idx, out_strides)
-
-            # Setup input index
-            for j in range(ndim):
-                a_idx[j] = out_idx[j]
-
-            # First element
-            a_idx[reduce_dim] = 0
-            curr_pos = index_to_position(a_idx, a_strides)
-            acc = a_storage[curr_pos]
-
-            # Reduce remaining
-            for j in range(1, a_shape[reduce_dim]):
-                a_idx[reduce_dim] = j
-                curr_pos = index_to_position(a_idx, a_strides)
-                acc = fn(acc, a_storage[curr_pos])
-
-            out[out_pos] = acc
-
+        raise NotImplementedError("Need to implement for Task 3.1")
     return njit(_reduce, parallel=True)  # type: ignore
 
 
