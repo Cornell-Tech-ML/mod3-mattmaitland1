@@ -275,18 +275,20 @@ def _sum_practice(out: Storage, a: Storage, size: int) -> None:
     i = cuda.blockIdx.x * cuda.blockDim.x + cuda.threadIdx.x
     pos = cuda.threadIdx.x
 
-    # Load data into shared memory
+    # Initialize shared memory
+    cache[pos] = 0.0
+    
+    # Load data if within bounds
     if i < size:
-        cache[pos] = float(a[i])  # Ensure float conversion
-    else:
-        cache[pos] = 0.0
+        cache[pos] = a[i]
     
     cuda.syncthreads()
     
-    # Reduction within block
-    for stride in range(BLOCK_DIM//2, 0, -1):  # Start from 16, 8, 4, 2, 1
+    # Binary tree reduction
+    for d in range(BLOCK_DIM // 2):
+        stride = BLOCK_DIM >> (d + 1)
         if pos < stride:
-            cache[pos] = cache[pos] + cache[pos + stride]
+            cache[pos] += cache[pos + stride]
         cuda.syncthreads()
     
     # Write result
