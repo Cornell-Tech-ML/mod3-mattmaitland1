@@ -265,8 +265,26 @@ def tensor_zip(
 
 
 def tensor_reduce(
-    fn: Callable[[float, float], float]
+    fn: Callable[[float, float], float],
 ) -> Callable[[Storage, Shape, Strides, Storage, Shape, Strides, int], None]:
+    """NUMBA higher-order tensor reduce function. See `tensor_ops.py` for description.
+
+    Optimizations:
+
+    * Main loop in parallel
+    * All indices use numpy buffers
+    * Inner-loop should not call any functions or write non-local variables
+
+    Args:
+    ----
+        fn: reduction function mapping two floats to float.
+
+    Returns:
+    -------
+        Tensor reduce function
+
+    """
+
     def _reduce(
         out: Storage,
         out_shape: Shape,
@@ -359,7 +377,24 @@ def _tensor_matrix_multiply(
     b_batch_stride = b_strides[0] if b_shape[0] > 1 else 0
 
     # TODO: Implement for Task 3.2.
-    raise NotImplementedError("Need to implement for Task 3.2")
+    batch_size = max(a_shape[0], b_shape[0])
+    rows, cols = a_shape[1], b_shape[2]
+    reduce_dim = a_shape[2]
+
+    for p in prange(batch_size * rows):
+        batch = p // rows
+        row = p % rows
+        
+        a_start = batch * a_batch_stride + row * a_strides[1]
+        b_start = batch * b_batch_stride
+        out_pos = batch * out_strides[0] + row * out_strides[1]
+
+        for j in range(cols):
+            temp = 0.0
+            for k in range(reduce_dim):
+                temp += a_storage[a_start + k * a_strides[2]] * \
+                       b_storage[b_start + k * b_strides[1] + j * b_strides[2]]
+            out[out_pos + j * out_strides[2]] = temp
 
 
 tensor_matrix_multiply = njit(_tensor_matrix_multiply, parallel=True)
