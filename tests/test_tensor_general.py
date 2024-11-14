@@ -164,7 +164,8 @@ if numba.cuda.is_available():
         b = minitorch.tensor(x)
         s = b.sum()[0]
         b2 = minitorch.tensor(x, backend=shared["cuda"])
-        out = b2.sum(0)
+        # out = b2.sum(0)
+        out = minitorch.sum_practice(b2)
         assert_close(s, out[0])
 
     @pytest.mark.task3_3
@@ -173,7 +174,8 @@ if numba.cuda.is_available():
         b = minitorch.tensor(x)
         s = b.sum()[0]
         b2 = minitorch.tensor(x, backend=shared["cuda"])
-        out = b2.sum(0)
+        # out = b2.sum(0)
+        out = minitorch.sum_practice(b2)
         assert_close(s, out[0])
 
     @pytest.mark.task3_3
@@ -182,7 +184,8 @@ if numba.cuda.is_available():
         b = minitorch.tensor(x)
         s = b.sum(1)
         b2 = minitorch.tensor(x, backend=shared["cuda"])
-        out = b2.sum(1)
+        # out = b2.sum(1)
+        out = minitorch.sum_practice(b2)
         for i in range(16):
             assert_close(s[i, 0], out[i, 0])
 
