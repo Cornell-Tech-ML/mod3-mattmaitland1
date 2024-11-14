@@ -265,26 +265,8 @@ def tensor_zip(
 
 
 def tensor_reduce(
-    fn: Callable[[float, float], float],
+    fn: Callable[[float, float], float]
 ) -> Callable[[Storage, Shape, Strides, Storage, Shape, Strides, int], None]:
-    """NUMBA higher-order tensor reduce function. See `tensor_ops.py` for description.
-
-    Optimizations:
-
-    * Main loop in parallel
-    * All indices use numpy buffers
-    * Inner-loop should not call any functions or write non-local variables
-
-    Args:
-    ----
-        fn: reduction function mapping two floats to float.
-
-    Returns:
-    -------
-        Tensor reduce function
-
-    """
-
     def _reduce(
         out: Storage,
         out_shape: Shape,
@@ -294,38 +276,37 @@ def tensor_reduce(
         a_strides: Strides,
         reduce_dim: int,
     ) -> None:
-        # Calculate output size
-        size = len(out_shape)
-        out_size = 1
-        for i in range(size):
-            out_size *= out_shape[i]
+        # Get total elements
+        ndim = len(out_shape)
+        total = 1
+        for i in range(ndim):
+            total *= out_shape[i]
 
-        # Main parallel loop over output positions
-        for i in prange(out_size):
-            # Create thread-local index buffers
-            out_index = np.empty(size, np.int32)
-            a_index = np.empty(size, np.int32)
+        # Process each position
+        for i in prange(total):
+            # Thread buffers 
+            out_idx = np.empty(ndim, np.int32)
+            a_idx = np.empty(ndim, np.int32)
 
-            # Convert position to indices
-            to_index(i, out_shape, out_index)
-            out_pos = index_to_position(out_index, out_strides)
+            # Map to output
+            to_index(i, out_shape, out_idx)
+            out_pos = index_to_position(out_idx, out_strides)
 
-            # Copy output index to a_index
-            for j in range(size):
-                a_index[j] = out_index[j]
+            # Setup input indices
+            for j in range(ndim):
+                a_idx[j] = out_idx[j]
 
-            # Initialize reduction with first element
-            a_index[reduce_dim] = 0
-            pos = index_to_position(a_index, a_strides)
-            acc = a_storage[pos]
+            # First value
+            a_idx[reduce_dim] = 0
+            curr_pos = index_to_position(a_idx, a_strides)
+            acc = a_storage[curr_pos]
 
-            # Inner reduction loop starting from second element
+            # Reduce remaining
             for j in range(1, a_shape[reduce_dim]):
-                a_index[reduce_dim] = j
-                pos = index_to_position(a_index, a_strides)
-                acc = fn(acc, a_storage[pos])
+                a_idx[reduce_dim] = j
+                curr_pos = index_to_position(a_idx, a_strides)
+                acc = fn(acc, a_storage[curr_pos])
 
-            # Store result
             out[out_pos] = acc
 
     return njit(_reduce, parallel=True)
