@@ -294,8 +294,41 @@ def tensor_reduce(
         a_strides: Strides,
         reduce_dim: int,
     ) -> None:
-        raise NotImplementedError("Need to implement for Task 3.1")
-    return njit(_reduce, parallel=True)  # type: ignore
+        # Calculate output size
+        size = len(out_shape)
+        out_size = 1
+        for i in range(size):
+            out_size *= out_shape[i]
+
+        # Main parallel loop over output positions
+        for i in prange(out_size):
+            # Create thread-local index buffers
+            out_index = np.empty(size, np.int32)
+            a_index = np.empty(size, np.int32)
+
+            # Convert position to indices
+            to_index(i, out_shape, out_index)
+            out_pos = index_to_position(out_index, out_strides)
+
+            # Copy output index to a_index
+            for j in range(size):
+                a_index[j] = out_index[j]
+
+            # Initialize reduction with first element
+            a_index[reduce_dim] = 0
+            pos = index_to_position(a_index, a_strides)
+            acc = a_storage[pos]
+
+            # Inner reduction loop starting from second element
+            for j in range(1, a_shape[reduce_dim]):
+                a_index[reduce_dim] = j
+                pos = index_to_position(a_index, a_strides)
+                acc = fn(acc, a_storage[pos])
+
+            # Store result
+            out[out_pos] = acc
+
+    return njit(_reduce, parallel=True)
 
 
 def _tensor_matrix_multiply(
