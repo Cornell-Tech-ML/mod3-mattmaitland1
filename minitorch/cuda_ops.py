@@ -342,33 +342,35 @@ def tensor_reduce(
         out_pos = cuda.blockIdx.x
         pos = cuda.threadIdx.x
 
-        # Initialize shared memory
-        cache[pos] = reduce_value
-        
-        # Convert output position to indices
+        # Initialize output index
         to_index(out_pos, out_shape, out_index)
         
-        # Load and reduce within block
+        # Get reduce dimension info
         reduce_size = a_shape[reduce_dim]
+        reduce_stride = a_strides[reduce_dim]
+        
+        # Initialize thread's accumulator with reduce_value
+        thread_total = reduce_value
+        
+        # Each thread processes multiple elements in strided fashion
         for i in range(pos, reduce_size, BLOCK_DIM):
             if i < reduce_size:
-                # Update index for reduce dimension
                 out_index[reduce_dim] = i
-                # Get position in input
                 a_pos = index_to_position(out_index, a_strides)
-                # Reduce
-                cache[pos] = fn(cache[pos], a_storage[a_pos])
-                
+                thread_total = fn(thread_total, a_storage[a_pos])
+        
+        # Store thread result in shared memory
+        cache[pos] = thread_total
         cuda.syncthreads()
         
-        # Reduce within block
+        # Reduce within block using sequential addressing
         stride = BLOCK_DIM // 2
         while stride > 0:
             if pos < stride:
                 cache[pos] = fn(cache[pos], cache[pos + stride])
             cuda.syncthreads()
             stride //= 2
-            
+        
         # Write result
         if pos == 0:
             out[out_pos] = cache[0]
