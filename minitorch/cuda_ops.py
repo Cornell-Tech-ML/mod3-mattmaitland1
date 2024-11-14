@@ -285,8 +285,9 @@ def _sum_practice(out: Storage, a: Storage, size: int) -> None:
     # Perform reduction within the block
     stride = 1
     while stride < BLOCK_DIM:
-        if pos % (2 * stride) == 0:
-            cache[pos] += cache[pos + stride]
+        index = 2 * stride * pos
+        if index < BLOCK_DIM:
+            cache[index] += cache[index + stride]
         stride *= 2
         cuda.syncthreads()  # Synchronize after each step in the reduction
 
