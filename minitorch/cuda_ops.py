@@ -285,9 +285,8 @@ def _sum_practice(out: Storage, a: Storage, size: int) -> None:
     # Perform reduction within the block
     stride = 1
     while stride < BLOCK_DIM:
-        index = 2 * stride * pos
-        if index < BLOCK_DIM:
-            cache[index] += cache[index + stride]
+        if pos % (2 * stride) == 0:
+            cache[pos] += cache[pos + stride]
         stride *= 2
         cuda.syncthreads()  # Synchronize after each step in the reduction
 
@@ -343,35 +342,8 @@ def tensor_reduce(
         out_pos = cuda.blockIdx.x
         pos = cuda.threadIdx.x
 
-        # Initialize with reduce_value (important for large inputs)
-        cache[pos] = reduce_value
-
-        # Convert output position to indices
-        to_index(out_pos, out_shape, out_index)
-
-        # Calculate reduction size and stride
-        reduce_size = a_shape[reduce_dim]
-        reduce_stride = a_strides[reduce_dim]
-
-        # Each thread handles multiple elements for large inputs
-        for i in range(pos, reduce_size, BLOCK_DIM):
-            if i < reduce_size:
-                # Update index for current position
-                out_index[reduce_dim] = i
-                a_pos = index_to_position(out_index, a_strides)
-                cache[pos] = fn(cache[pos], a_storage[a_pos])
-
-        cuda.syncthreads()
-
-        # Efficient block reduction
-        for stride in range(BLOCK_DIM // 2, 0, -1):
-            if pos < stride:
-                cache[pos] = fn(cache[pos], cache[pos + stride])
-            cuda.syncthreads()
-
-        # Write final result
-        if pos == 0:
-            out[out_pos] = cache[0]
+        # TODO: Implement for Task 3.3.
+        raise NotImplementedError("Need to implement for Task 3.3")
 
     return jit(_reduce)  # type: ignore
 
