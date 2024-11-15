@@ -342,36 +342,36 @@ def tensor_reduce(
         out_pos = cuda.blockIdx.x
         pos = cuda.threadIdx.x
 
-        # Initialize output index
+        # Initialize output index once
         to_index(out_pos, out_shape, out_index)
         
-        # Get reduce dimension info
+        # Pre-compute reduce dimension info
         reduce_size = a_shape[reduce_dim]
         reduce_stride = a_strides[reduce_dim]
         
-        # Initialize thread's accumulator with reduce_value
+        # Initialize with identity
         thread_total = reduce_value
         
-        # Each thread processes multiple elements in strided fashion
-        for i in range(pos, reduce_size, BLOCK_DIM):
+        # Process chunks to handle large inputs
+        chunk_size = (reduce_size + BLOCK_DIM - 1) // BLOCK_DIM
+        for chunk in range(chunk_size):
+            i = chunk * BLOCK_DIM + pos
             if i < reduce_size:
                 out_index[reduce_dim] = i
                 a_pos = index_to_position(out_index, a_strides)
                 thread_total = fn(thread_total, a_storage[a_pos])
         
-        # Store thread result in shared memory
+        # Store in shared memory
         cache[pos] = thread_total
         cuda.syncthreads()
         
-        # Reduce within block using sequential addressing
-        stride = BLOCK_DIM // 2
-        while stride > 0:
-            if pos < stride:
-                cache[pos] = fn(cache[pos], cache[pos + stride])
+        # Tree reduction in shared memory
+        for d in range(cuda.blockDim.x.bit_length() - 1, -1, -1):
+            if pos < (BLOCK_DIM >> d):
+                other = cache[pos + (BLOCK_DIM >> d)]
+                cache[pos] = fn(cache[pos], other)
             cuda.syncthreads()
-            stride //= 2
         
-        # Write result
         if pos == 0:
             out[out_pos] = cache[0]
 
