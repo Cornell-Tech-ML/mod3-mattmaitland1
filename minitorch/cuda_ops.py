@@ -336,34 +336,70 @@ def tensor_reduce(
         reduce_dim: int,
         reduce_value: float,
     ) -> None:
-        BLOCK_DIM = 1024
+        # BLOCK_DIM = 1024
+        # cache = cuda.shared.array(BLOCK_DIM, numba.float64)
+        # out_index = cuda.local.array(MAX_DIMS, numba.int32)
+        # out_pos = cuda.blockIdx.x
+        # pos = cuda.threadIdx.x
+
+        # # Initialize output index
+        # to_index(out_pos, out_shape, out_index)
+        
+        # # Get reduce dimension info
+        # reduce_size = a_shape[reduce_dim]
+        # reduce_stride = a_strides[reduce_dim]
+        
+        # # Initialize thread's accumulator with reduce_value
+        # thread_total = reduce_value
+        
+        # # Each thread processes multiple elements in strided fashion
+        # for i in range(pos, reduce_size, BLOCK_DIM):
+        #     if i < reduce_size:
+        #         out_index[reduce_dim] = i
+        #         a_pos = index_to_position(out_index, a_strides)
+        #         thread_total = fn(thread_total, a_storage[a_pos])
+        
+        # # Store thread result in shared memory
+        # cache[pos] = thread_total
+        # cuda.syncthreads()
+        
+        # # Reduce within block using sequential addressing
+        # stride = BLOCK_DIM // 2
+        # while stride > 0:
+        #     if pos < stride:
+        #         cache[pos] = fn(cache[pos], cache[pos + stride])
+        #     cuda.syncthreads()
+        #     stride //= 2
+        
+        # # Write result
+        # if pos == 0:
+        #     out[out_pos] = cache[0]
+        BLOCK_DIM = 512  # Choose a smaller block size if 1024 exceeds shared memory limits
         cache = cuda.shared.array(BLOCK_DIM, numba.float64)
-        out_index = cuda.local.array(MAX_DIMS, numba.int32)
+        
+        # Calculate global and local indices
         out_pos = cuda.blockIdx.x
         pos = cuda.threadIdx.x
-
-        # Initialize output index
-        to_index(out_pos, out_shape, out_index)
         
-        # Get reduce dimension info
+        # Initialize index and total accumulator
+        out_index = cuda.local.array(MAX_DIMS, numba.int32)
+        to_index(out_pos, out_shape, out_index)
         reduce_size = a_shape[reduce_dim]
         reduce_stride = a_strides[reduce_dim]
-        
-        # Initialize thread's accumulator with reduce_value
         thread_total = reduce_value
         
-        # Each thread processes multiple elements in strided fashion
+        # Perform reduction across threads
         for i in range(pos, reduce_size, BLOCK_DIM):
             if i < reduce_size:
                 out_index[reduce_dim] = i
                 a_pos = index_to_position(out_index, a_strides)
                 thread_total = fn(thread_total, a_storage[a_pos])
         
-        # Store thread result in shared memory
+        # Store partial result in shared memory and synchronize
         cache[pos] = thread_total
         cuda.syncthreads()
         
-        # Reduce within block using sequential addressing
+        # Perform block-wide reduction in shared memory
         stride = BLOCK_DIM // 2
         while stride > 0:
             if pos < stride:
@@ -371,9 +407,10 @@ def tensor_reduce(
             cuda.syncthreads()
             stride //= 2
         
-        # Write result
+        # Write result from the first thread in each block to the output
         if pos == 0:
             out[out_pos] = cache[0]
+
 
     return jit(_reduce)  # type: ignore
 
