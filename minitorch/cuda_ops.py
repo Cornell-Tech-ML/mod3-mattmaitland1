@@ -450,8 +450,28 @@ def _mm_practice(out: Storage, a: Storage, b: Storage, size: int) -> None:
 
     """
     BLOCK_DIM = 32
-    # TODO: Implement for Task 3.3.
-    raise NotImplementedError("Need to implement for Task 3.3")
+    
+    # Shared memory using BLOCK_DIM
+    shared_a = cuda.shared.array((BLOCK_DIM, BLOCK_DIM), numba.float64)
+    shared_b = cuda.shared.array((BLOCK_DIM, BLOCK_DIM), numba.float64)
+    
+    # Thread indices
+    row = cuda.threadIdx.x
+    col = cuda.threadIdx.y
+    
+    # Load data into shared memory
+    if row < size and col < size:
+        shared_a[row, col] = a[row * size + col]
+        shared_b[row, col] = b[row * size + col]
+    
+    cuda.syncthreads()
+    
+    # Compute output element
+    if row < size and col < size:
+        temp = 0.0
+        for k in range(size):
+            temp += shared_a[row, k] * shared_b[k, col]
+        out[row * size + col] = temp
 
 
 jit_mm_practice = jit(_mm_practice)
