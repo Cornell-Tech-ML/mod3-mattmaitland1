@@ -374,40 +374,44 @@ def tensor_reduce(
         # # Write result
         # if pos == 0:
         #     out[out_pos] = cache[0]
-        BLOCK_DIM = 512  # Choose a smaller block size if 1024 exceeds shared memory limits
-        cache = cuda.shared.array(BLOCK_DIM, numba.float64)
-        
-        # Calculate global and local indices
+        BLOCK_DIM = 1024
+        # Use smaller shared memory size
+        SHARED_SIZE = 256  
+        cache = cuda.shared.array(SHARED_SIZE, numba.float64)
+        out_index = cuda.local.array(MAX_DIMS, numba.int32)
         out_pos = cuda.blockIdx.x
         pos = cuda.threadIdx.x
-        
-        # Initialize index and total accumulator
-        out_index = cuda.local.array(MAX_DIMS, numba.int32)
+
+        # Initialize output index
         to_index(out_pos, out_shape, out_index)
+        
+        # Get reduce dimension info
         reduce_size = a_shape[reduce_dim]
         reduce_stride = a_strides[reduce_dim]
-        thread_total = reduce_value
         
-        # Perform reduction across threads
+        # Initialize accumulator
+        acc = reduce_value
+        
+        # Each thread processes multiple elements
         for i in range(pos, reduce_size, BLOCK_DIM):
             if i < reduce_size:
                 out_index[reduce_dim] = i
                 a_pos = index_to_position(out_index, a_strides)
-                thread_total = fn(thread_total, a_storage[a_pos])
+                acc = fn(acc, a_storage[a_pos])
         
-        # Store partial result in shared memory and synchronize
-        cache[pos] = thread_total
+        # Use shared memory in smaller chunks
+        cache[pos % SHARED_SIZE] = acc
         cuda.syncthreads()
         
-        # Perform block-wide reduction in shared memory
-        stride = BLOCK_DIM // 2
+        # Reduce within shared memory limits
+        stride = SHARED_SIZE // 2
         while stride > 0:
             if pos < stride:
                 cache[pos] = fn(cache[pos], cache[pos + stride])
             cuda.syncthreads()
             stride //= 2
         
-        # Write result from the first thread in each block to the output
+        # Write result
         if pos == 0:
             out[out_pos] = cache[0]
 
