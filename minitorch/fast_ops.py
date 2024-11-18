@@ -168,40 +168,49 @@ def tensor_map(
         in_shape: Shape,
         in_strides: Strides,
     ) -> None:
-        # Calculate total size from shape
+        # Calculate total size
         size = 1
         for i in range(len(out_shape)):
             size *= out_shape[i]
 
-        # Check if tensors are stride-aligned
-        is_contiguous = True
-        if len(out_shape) != len(in_shape):
-            is_contiguous = False
-        else:
-            for i in range(len(out_shape)):
-                if (out_shape[i] != in_shape[i] or 
-                    out_strides[i] != in_strides[i]):
-                    is_contiguous = False
-                    break
-
-        # Create reusable index buffers
+        # Create reusable index buffers outside loop
         out_index = np.empty(MAX_DIMS, np.int32)
         in_index = np.empty(MAX_DIMS, np.int32)
 
+        # Check if tensors are truly contiguous
+        out_is_contiguous = True
+        in_is_contiguous = True
+        
+        # Check output contiguity
+        current_stride = 1
+        for i in range(len(out_shape) - 1, -1, -1):
+            if out_strides[i] != current_stride:
+                out_is_contiguous = False
+                break
+            current_stride *= out_shape[i]
+        
+        # Check input contiguity
+        current_stride = 1
+        for i in range(len(in_shape) - 1, -1, -1):
+            if in_strides[i] != current_stride:
+                in_is_contiguous = False
+                break
+            current_stride *= in_shape[i]
+
         # Main parallel loop
         for i in prange(size):
-            if is_contiguous:
-                # Fast path for aligned tensors
+            if out_is_contiguous and in_is_contiguous and out_shape == in_shape:
+                # Fast path for truly contiguous tensors
                 out[i] = fn(in_storage[i])
             else:
-                # Handle non-contiguous case
+                # Standard path for non-contiguous or broadcasted tensors
                 to_index(i, out_shape, out_index)
                 broadcast_index(out_index, out_shape, in_shape, in_index)
                 
-                out_pos = index_to_position(out_index, out_strides)
-                in_pos = index_to_position(in_index, in_strides)
+                o = index_to_position(out_index, out_strides)
+                j = index_to_position(in_index, in_strides)
                 
-                out[out_pos] = fn(in_storage[in_pos])
+                out[o] = fn(in_storage[j])
 
     return njit(_map, parallel=True)  # type: ignore
 
