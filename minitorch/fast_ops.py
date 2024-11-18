@@ -177,33 +177,33 @@ def tensor_map(
         out_index = np.empty(MAX_DIMS, np.int32)
         in_index = np.empty(MAX_DIMS, np.int32)
 
-        # Check if tensors are truly contiguous
-        out_is_contiguous = True
-        in_is_contiguous = True
-        
-        # Check output contiguity
-        current_stride = 1
-        for i in range(len(out_shape) - 1, -1, -1):
-            if out_strides[i] != current_stride:
-                out_is_contiguous = False
-                break
-            current_stride *= out_shape[i]
-        
-        # Check input contiguity
-        current_stride = 1
-        for i in range(len(in_shape) - 1, -1, -1):
-            if in_strides[i] != current_stride:
-                in_is_contiguous = False
-                break
-            current_stride *= in_shape[i]
+        # Check if shapes match
+        shapes_match = True
+        if len(out_shape) != len(in_shape):
+            shapes_match = False
+        else:
+            for i in range(len(out_shape)):
+                if out_shape[i] != in_shape[i]:
+                    shapes_match = False
+                    break
+
+        # Check if strides match
+        strides_match = True
+        if len(out_strides) != len(in_strides):
+            strides_match = False
+        else:
+            for i in range(len(out_strides)):
+                if out_strides[i] != in_strides[i]:
+                    strides_match = False
+                    break
 
         # Main parallel loop
         for i in prange(size):
-            if out_is_contiguous and in_is_contiguous and out_shape == in_shape:
-                # Fast path for truly contiguous tensors
+            if shapes_match and strides_match:
+                # Fast path for aligned tensors
                 out[i] = fn(in_storage[i])
             else:
-                # Standard path for non-contiguous or broadcasted tensors
+                # Standard path for non-aligned tensors
                 to_index(i, out_shape, out_index)
                 broadcast_index(out_index, out_shape, in_shape, in_index)
                 
