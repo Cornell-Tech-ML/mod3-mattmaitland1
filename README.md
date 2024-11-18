@@ -34,7 +34,7 @@ The files that will be synced are:
 
 <h2>Simple</h2>
 <h3>CPU</h3>
-Epoch  0  loss  4.578356361272406 correct 35
+Epoch  0  loss  4.578356361272406 correct 35  
 Epoch  10  loss  1.7062716711960901 correct 49
 Epoch  20  loss  0.7548648765179116 correct 50
 Epoch  30  loss  1.165145762695747 correct 50
