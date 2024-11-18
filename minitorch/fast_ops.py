@@ -170,18 +170,11 @@ def tensor_map(
     ) -> None:
         size = len(out)
 
-        # Check if shapes and strides match
-        is_contiguous = True
-        if len(out_shape) != len(in_shape):
-            is_contiguous = False
-        else:
-            for i in range(len(out_shape)):
-                if out_shape[i] != in_shape[i] or out_strides[i] != in_strides[i]:
-                    is_contiguous = False
-                    break
-
-        # Fast path for aligned strides
-        if is_contiguous:
+        # Check if tensors are stride-aligned using numpy comparisons
+        if (len(out_strides) == len(in_strides)
+            and np.array_equal(out_strides, in_strides)
+            and np.array_equal(out_shape, in_shape)):
+            # Fast path for aligned tensors
             for i in prange(size):
                 out[i] = fn(in_storage[i])
             return
