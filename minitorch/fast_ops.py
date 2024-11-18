@@ -169,34 +169,29 @@ def tensor_map(
         in_strides: Strides,
     ) -> None:
         # Calculate total size
-        size = 1
-        for i in range(len(out_shape)):
-            size *= out_shape[i]
+        size = len(out)
 
-        # Create reusable index buffers outside the loop
+        # Create reusable index buffers
         out_index = np.empty(MAX_DIMS, np.int32)
         in_index = np.empty(MAX_DIMS, np.int32)
 
-        # Check if tensors are aligned (same shape and strides)
-        is_simple = True
+        # Check if shapes and strides match using simple loops
+        is_contiguous = True
         if len(out_shape) != len(in_shape):
-            is_simple = False
+            is_contiguous = False
         else:
             for i in range(len(out_shape)):
-                if out_shape[i] != in_shape[i]:
-                    is_simple = False
-                    break
-                if out_strides[i] != in_strides[i]:
-                    is_simple = False
+                if out_shape[i] != in_shape[i] or out_strides[i] != in_strides[i]:
+                    is_contiguous = False
                     break
 
         # Main parallel loop
         for i in prange(size):
-            if is_simple:
+            if is_contiguous:
                 # Fast path for aligned tensors
                 out[i] = fn(in_storage[i])
             else:
-                # Handle broadcasting and different strides
+                # Standard path for non-aligned tensors
                 to_index(i, out_shape, out_index)
                 broadcast_index(out_index, out_shape, in_shape, in_index)
                 
