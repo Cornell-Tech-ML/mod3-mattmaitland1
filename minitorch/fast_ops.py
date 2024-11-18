@@ -173,28 +173,35 @@ def tensor_map(
         for i in range(len(out_shape)):
             size *= out_shape[i]
 
-        # Check if tensors are stride-aligned using numpy comparisons
-        if (len(out_strides) == len(in_strides)
-            and np.array_equal(out_strides, in_strides)
-            and np.array_equal(out_shape, in_shape)):
-            # Fast path for aligned tensors
-            for i in prange(size):
-                out[i] = fn(in_storage[i])
-            return
+        # Check if tensors are stride-aligned
+        is_contiguous = True
+        if len(out_shape) != len(in_shape):
+            is_contiguous = False
+        else:
+            for i in range(len(out_shape)):
+                if (out_shape[i] != in_shape[i] or 
+                    out_strides[i] != in_strides[i]):
+                    is_contiguous = False
+                    break
 
         # Create reusable index buffers
         out_index = np.empty(MAX_DIMS, np.int32)
         in_index = np.empty(MAX_DIMS, np.int32)
 
-        # Main parallel loop for non-aligned case
+        # Main parallel loop
         for i in prange(size):
-            to_index(i, out_shape, out_index)
-            broadcast_index(out_index, out_shape, in_shape, in_index)
-            
-            out_pos = index_to_position(out_index, out_strides)
-            in_pos = index_to_position(in_index, in_strides)
-            
-            out[out_pos] = fn(in_storage[in_pos])
+            if is_contiguous:
+                # Fast path for aligned tensors
+                out[i] = fn(in_storage[i])
+            else:
+                # Handle non-contiguous case
+                to_index(i, out_shape, out_index)
+                broadcast_index(out_index, out_shape, in_shape, in_index)
+                
+                out_pos = index_to_position(out_index, out_strides)
+                in_pos = index_to_position(in_index, in_strides)
+                
+                out[out_pos] = fn(in_storage[in_pos])
 
     return njit(_map, parallel=True)  # type: ignore
 
