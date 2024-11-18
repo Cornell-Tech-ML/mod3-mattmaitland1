@@ -34,7 +34,8 @@ The files that will be synced are:
 
 <h2>Simple</h2>
 <h3>CPU</h3>
-Epoch  0  loss  4.578356361272406 correct 35  
+```
+Epoch  0  loss  4.578356361272406 correct 35
 Epoch  10  loss  1.7062716711960901 correct 49
 Epoch  20  loss  0.7548648765179116 correct 50
 Epoch  30  loss  1.165145762695747 correct 50
@@ -84,7 +85,7 @@ Epoch  460  loss  0.012558141185876321 correct 50
 Epoch  470  loss  0.015760327718579614 correct 50
 Epoch  480  loss  0.019712020738753087 correct 50
 Epoch  490  loss  0.01240613924867935 correct 50
-
+```
 Average execution time: 0.17 seconds
 
 <h3>GPU</h3>
