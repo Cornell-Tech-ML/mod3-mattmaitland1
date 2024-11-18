@@ -168,23 +168,33 @@ def tensor_map(
         in_shape: Shape,
         in_strides: Strides,
     ) -> None:
-        # Calculate total size
+        # Calculate total size from shape
         size = 1
         for i in range(len(out_shape)):
             size *= out_shape[i]
 
-        # Main loop
+        # Check if tensors are stride-aligned using numpy comparisons
+        if (len(out_strides) == len(in_strides)
+            and np.array_equal(out_strides, in_strides)
+            and np.array_equal(out_shape, in_shape)):
+            # Fast path for aligned tensors
+            for i in prange(size):
+                out[i] = fn(in_storage[i])
+            return
+
+        # Create reusable index buffers
+        out_index = np.empty(MAX_DIMS, np.int32)
+        in_index = np.empty(MAX_DIMS, np.int32)
+
+        # Main parallel loop for non-aligned case
         for i in prange(size):
-            out_index = np.empty(len(out_shape), np.int32)
-            in_index = np.empty(len(in_shape), np.int32)
-            
             to_index(i, out_shape, out_index)
             broadcast_index(out_index, out_shape, in_shape, in_index)
             
-            o = index_to_position(out_index, out_strides)
-            j = index_to_position(in_index, in_strides)
+            out_pos = index_to_position(out_index, out_strides)
+            in_pos = index_to_position(in_index, in_strides)
             
-            out[o] = fn(in_storage[j])
+            out[out_pos] = fn(in_storage[in_pos])
 
     return njit(_map, parallel=True)  # type: ignore
 
