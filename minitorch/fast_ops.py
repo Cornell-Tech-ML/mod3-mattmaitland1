@@ -238,13 +238,13 @@ def tensor_zip(
         for dim in range(len(out_shape)):
             total_size *= out_shape[dim]
 
+        # Create reusable index buffers outside loop
+        out_idx = np.empty(MAX_DIMS, np.int32)
+        a_idx = np.empty(MAX_DIMS, np.int32)
+        b_idx = np.empty(MAX_DIMS, np.int32)
+
         # Main parallel loop
         for i in prange(total_size):
-            # Create thread-local index buffers
-            out_idx = np.empty(len(out_shape), np.int32)
-            a_idx = np.empty(len(out_shape), np.int32)
-            b_idx = np.empty(len(out_shape), np.int32)
-
             # Convert flat index to coordinates
             to_index(i, out_shape, out_idx)
             
@@ -300,12 +300,12 @@ def tensor_reduce(
         for i in range(ndim):
             total *= out_shape[i]
 
+        # Create reusable index buffers outside loop
+        out_idx = np.empty(MAX_DIMS, np.int32)
+        a_idx = np.empty(MAX_DIMS, np.int32)
+
         # Process each position
         for i in prange(total):
-            # Thread buffers 
-            out_idx = np.empty(ndim, np.int32)
-            a_idx = np.empty(ndim, np.int32)
-
             # Map to output
             to_index(i, out_shape, out_idx)
             out_pos = index_to_position(out_idx, out_strides)
