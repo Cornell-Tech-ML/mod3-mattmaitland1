@@ -168,23 +168,37 @@ def tensor_map(
         in_shape: Shape,
         in_strides: Strides,
     ) -> None:
-        # Calculate total size
-        size = 1
-        for i in range(len(out_shape)):
-            size *= out_shape[i]
+        size = len(out)
 
-        # Main loop
+        # Check if shapes and strides match
+        is_contiguous = True
+        if len(out_shape) != len(in_shape):
+            is_contiguous = False
+        else:
+            for i in range(len(out_shape)):
+                if out_shape[i] != in_shape[i] or out_strides[i] != in_strides[i]:
+                    is_contiguous = False
+                    break
+
+        # Fast path for aligned strides
+        if is_contiguous:
+            for i in prange(size):
+                out[i] = fn(in_storage[i])
+            return
+
+        # Create reusable index buffers
+        out_index = np.empty(MAX_DIMS, np.int32)
+        in_index = np.empty(MAX_DIMS, np.int32)
+
+        # Main parallel loop for non-aligned case
         for i in prange(size):
-            out_index = np.empty(len(out_shape), np.int32)
-            in_index = np.empty(len(in_shape), np.int32)
-            
             to_index(i, out_shape, out_index)
             broadcast_index(out_index, out_shape, in_shape, in_index)
             
-            o = index_to_position(out_index, out_strides)
-            j = index_to_position(in_index, in_strides)
+            out_pos = index_to_position(out_index, out_strides)
+            in_pos = index_to_position(in_index, in_strides)
             
-            out[o] = fn(in_storage[j])
+            out[out_pos] = fn(in_storage[in_pos])
 
     return njit(_map, parallel=True)  # type: ignore
 
