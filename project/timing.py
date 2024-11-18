@@ -4,7 +4,8 @@ import minitorch
 import time
 import sys
 import numpy as np
-import matplotlib.pyplot as plt
+import plotly.graph_objects as go
+from plotly.subplots import make_subplots
 
 FastTensorBackend = minitorch.TensorBackend(minitorch.FastOps)
 GPUBackend = minitorch.TensorBackend(minitorch.CudaOps)
@@ -49,32 +50,39 @@ if __name__ == "__main__":
         times[size]["gpu"] = np.mean(gpu_times)
         print(times[size])
 
-    # Create plots
-    plt.figure(figsize=(12, 6))
-    
-    # Line plot
-    plt.subplot(1, 2, 1)
-    plt.plot(sizes, [times[s]["fast"] for s in sizes], 'b-o', label='CPU (Fast)')
-    plt.plot(sizes, [times[s]["gpu"] for s in sizes], 'r-o', label='GPU')
-    plt.xlabel('Matrix Size')
-    plt.ylabel('Time (seconds)')
-    plt.title('Matrix Multiplication Performance')
-    plt.legend()
-    plt.grid(True)
-    
+    # Create plots using plotly
+    fig = make_subplots(rows=1, cols=2,
+                       subplot_titles=('Linear Scale', 'Log Scale'))
+
+    # Linear scale plot
+    fig.add_trace(
+        go.Scatter(x=sizes, y=[times[s]["fast"] for s in sizes],
+                  name="CPU (Fast)", line=dict(color='blue')),
+        row=1, col=1
+    )
+    fig.add_trace(
+        go.Scatter(x=sizes, y=[times[s]["gpu"] for s in sizes],
+                  name="GPU", line=dict(color='red')),
+        row=1, col=1
+    )
+
     # Log scale plot
-    plt.subplot(1, 2, 2)
-    plt.loglog(sizes, [times[s]["fast"] for s in sizes], 'b-o', label='CPU (Fast)')
-    plt.loglog(sizes, [times[s]["gpu"] for s in sizes], 'r-o', label='GPU')
-    plt.xlabel('Matrix Size (log scale)')
-    plt.ylabel('Time (seconds) (log scale)')
-    plt.title('Performance (Log Scale)')
-    plt.legend()
-    plt.grid(True)
-    
-    plt.tight_layout()
-    plt.savefig('matmul_performance.png')
-    plt.show()
+    fig.add_trace(
+        go.Scatter(x=sizes, y=[times[s]["fast"] for s in sizes],
+                  name="CPU (Fast)", line=dict(color='blue', log_y=True)),
+        row=1, col=2
+    )
+    fig.add_trace(
+        go.Scatter(x=sizes, y=[times[s]["gpu"] for s in sizes],
+                  name="GPU", line=dict(color='red', log_y=True)),
+        row=1, col=2
+    )
+
+    fig.update_xaxes(title_text='Matrix Size')
+    fig.update_yaxes(title_text='Time (seconds)')
+    fig.update_layout(title_text='Matrix Multiplication Performance')
+
+    fig.show()
 
     # Print timing summary
     print("\nTiming summary")
