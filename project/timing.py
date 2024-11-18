@@ -4,8 +4,6 @@ import minitorch
 import time
 import sys
 import numpy as np
-import plotly.graph_objects as go
-from plotly.subplots import make_subplots
 
 FastTensorBackend = minitorch.TensorBackend(minitorch.FastOps)
 GPUBackend = minitorch.TensorBackend(minitorch.CudaOps)
@@ -26,14 +24,12 @@ if __name__ == "__main__":
 
     ntrials = 3
     times = {}
-    sizes = [64, 128, 256, 512, 1024]
-    
-    for size in sizes:
+    for size in [64, 128, 256, 512, 1024]:
         print(f"Running size {size}")
         times[size] = {}
+        simple_times = []
         fast_times = []
         gpu_times = []
-        
         for _ in range(ntrials):
             start_fast = time.time()
             run_matmul(FastTensorBackend, size)
@@ -43,49 +39,18 @@ if __name__ == "__main__":
             run_matmul(GPUBackend, size)
             end_gpu = time.time()
 
-            fast_times.append(end_fast - start_fast)
-            gpu_times.append(end_gpu - start_gpu)
+            fast_time = end_fast - start_fast
+            gpu_time = end_gpu - start_gpu
+
+            fast_times.append(fast_time)
+            gpu_times.append(gpu_time)
 
         times[size]["fast"] = np.mean(fast_times)
         times[size]["gpu"] = np.mean(gpu_times)
         print(times[size])
 
-    # Create plots using plotly
-    fig = make_subplots(rows=1, cols=2,
-                       subplot_titles=('Linear Scale', 'Log Scale'))
-
-    # Linear scale plot
-    fig.add_trace(
-        go.Scatter(x=sizes, y=[times[s]["fast"] for s in sizes],
-                  name="CPU (Fast)", line=dict(color='blue')),
-        row=1, col=1
-    )
-    fig.add_trace(
-        go.Scatter(x=sizes, y=[times[s]["gpu"] for s in sizes],
-                  name="GPU", line=dict(color='red')),
-        row=1, col=1
-    )
-
-    # Log scale plot
-    fig.add_trace(
-        go.Scatter(x=sizes, y=[times[s]["fast"] for s in sizes],
-                  name="CPU (Fast)", line=dict(color='blue', log_y=True)),
-        row=1, col=2
-    )
-    fig.add_trace(
-        go.Scatter(x=sizes, y=[times[s]["gpu"] for s in sizes],
-                  name="GPU", line=dict(color='red', log_y=True)),
-        row=1, col=2
-    )
-
-    fig.update_xaxes(title_text='Matrix Size')
-    fig.update_yaxes(title_text='Time (seconds)')
-    fig.update_layout(title_text='Matrix Multiplication Performance')
-
-    fig.show()
-
-    # Print timing summary
-    print("\nTiming summary")
+    print()
+    print("Timing summary")
     for size, stimes in times.items():
         print(f"Size: {size}")
         for b, t in stimes.items():
