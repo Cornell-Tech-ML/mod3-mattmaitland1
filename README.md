@@ -34,6 +34,8 @@ The files that will be synced are:
 
 <h2>Proof of speed-ups on large matrix operations:</h2>
 Output from timing.py provided on Ed
+
+```
 Timing summary
 Size: 64
     fast: 0.00319
@@ -50,14 +52,15 @@ Size: 512
 Size: 1024
     fast: 2.16130
     gpu: 0.97939
+```
 
 
 
 
 <h2>Simple</h2>
 <h3>CPU</h3>
-```
 
+```
 Epoch  0  loss  4.578356361272406 correct 35
 Epoch  10  loss  1.7062716711960901 correct 49
 Epoch  20  loss  0.7548648765179116 correct 50
@@ -108,11 +111,14 @@ Epoch  460  loss  0.012558141185876321 correct 50
 Epoch  470  loss  0.015760327718579614 correct 50
 Epoch  480  loss  0.019712020738753087 correct 50
 Epoch  490  loss  0.01240613924867935 correct 50
-```
+
 
 Average execution time: 0.17 seconds
+```
 
 <h3>GPU</h3>
+
+```
 Epoch  0  loss  4.328733722271717 correct 46
 Epoch  10  loss  1.54015448042516 correct 49
 Epoch  20  loss  1.0230725840084884 correct 50
@@ -164,10 +170,13 @@ Epoch  480  loss  0.05526628888541616 correct 50
 Epoch  490  loss  0.00048704932993141187 correct 50
 
 Average execution time: 1.81 seconds
+```
 
 
 <h2>Xor</h2>
 <h3>CPU</h3>
+
+```
 Epoch  0  loss  6.18063664967868 correct 25
 Epoch  10  loss  4.547030460359165 correct 47
 Epoch  20  loss  3.9671677971462134 correct 43
@@ -221,9 +230,12 @@ Epoch  490  loss  0.11064292577320922 correct 50
 
 Average execution time: 0.17 seconds
 
+```
 
 
 <h3>GPU</h3>
+
+```
 Epoch  0  loss  4.423298595389291 correct 30
 Epoch  10  loss  3.7026982552618173 correct 47
 Epoch  20  loss  2.394555588912163 correct 48
@@ -276,11 +288,14 @@ Epoch  480  loss  0.3236906455773331 correct 50
 Epoch  490  loss  0.38983390144034447 correct 50
 
 Average execution time: 1.79 seconds
+```
 
 
 
 <h2>Split</h2>
 <h3>CPU</h3>
+
+```
 Epoch  0  loss  6.343115155818081 correct 36
 Epoch  10  loss  3.5641394232383394 correct 40
 Epoch  20  loss  3.1471355545411117 correct 43
@@ -333,10 +348,13 @@ Epoch  480  loss  0.2042712324348394 correct 50
 Epoch  490  loss  0.018872636000514857 correct 50
 
 Average execution time: 0.17 seconds
+```
 
 
 
 <h3>GPU</h3>
+
+```
 Epoch  0  loss  5.620474598537574 correct 26
 Epoch  10  loss  4.07744839994591 correct 45
 Epoch  20  loss  3.1850190046324984 correct 47
@@ -389,6 +407,7 @@ Epoch  480  loss  0.9102436183957963 correct 49
 Epoch  490  loss  0.11339411022482951 correct 50
 
 Average execution time: 1.78 seconds
+```
 
 
 <h2>Bigger Dataset (Xor with 200 layers)</h2>
@@ -445,8 +464,11 @@ Epoch  480  loss  0.055990854232039255 correct 49
 Epoch  490  loss  0.7358433698236309 correct 50
 
 Average execution time: 0.26 seconds
+```
 
 <h3>GPU</h3>
+
+```
 Epoch  0  loss  12.950910745207487 correct 37
 Epoch  10  loss  2.3653773349694696 correct 47
 Epoch  20  loss  1.8479193020340656 correct 48
@@ -499,4 +521,5 @@ Epoch  480  loss  0.09893252679864915 correct 50
 Epoch  490  loss  0.052586164916684545 correct 50
 
 Average execution time: 1.87 seconds
+```
 
