@@ -409,9 +409,10 @@ Epoch  490  loss  0.11339411022482951 correct 50
 Average execution time: 1.78 seconds
 ```
 
-```
 <h2>Bigger Dataset (Xor with 200 layers)</h2>
 <h3>CPU</h3>
+
+```
 Epoch  0  loss  13.157290284522018 correct 31
 Epoch  10  loss  2.367584929948194 correct 45
 Epoch  20  loss  2.551091082129693 correct 40
