@@ -32,9 +32,32 @@ The files that will be synced are:
         minitorch/tensor_data.py minitorch/tensor_functions.py minitorch/tensor_ops.py minitorch/operators.py minitorch/scalar.py minitorch/scalar_functions.py minitorch/module.py minitorch/autodiff.py minitorch/module.py project/run_manual.py project/run_scalar.py project/run_tensor.py minitorch/operators.py minitorch/module.py minitorch/autodiff.py minitorch/tensor.py minitorch/datasets.py minitorch/testing.py minitorch/optim.py
 
 
+<h2>Proof of speed-ups on large matrix operations:</h2>
+Output from timing.py provided on Ed
+Timing summary
+Size: 64
+    fast: 0.00319
+    gpu: 0.00689
+Size: 128
+    fast: 0.01185
+    gpu: 0.01476
+Size: 256
+    fast: 0.05736
+    gpu: 0.05232
+Size: 512
+    fast: 0.36776
+    gpu: 0.21865
+Size: 1024
+    fast: 2.16130
+    gpu: 0.97939
+
+
+
+
 <h2>Simple</h2>
 <h3>CPU</h3>
 ```
+
 Epoch  0  loss  4.578356361272406 correct 35
 Epoch  10  loss  1.7062716711960901 correct 49
 Epoch  20  loss  0.7548648765179116 correct 50
@@ -86,6 +109,7 @@ Epoch  470  loss  0.015760327718579614 correct 50
 Epoch  480  loss  0.019712020738753087 correct 50
 Epoch  490  loss  0.01240613924867935 correct 50
 ```
+
 Average execution time: 0.17 seconds
 
 <h3>GPU</h3>
