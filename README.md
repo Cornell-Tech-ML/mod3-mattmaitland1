@@ -383,6 +383,8 @@ Size: 1024
     gpu: 0.97939
 ```
 
+![Timing Graph](output.png)
+
 
 
 
