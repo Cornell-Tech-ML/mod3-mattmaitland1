@@ -168,6 +168,14 @@ def tensor_map(
         in_shape: Shape,
         in_strides: Strides,
     ) -> None:
+        # Fast path for aligned tensors
+        if (len(out_strides) == len(in_strides) and 
+            np.array_equal(out_strides, in_strides) and 
+            np.array_equal(out_shape, in_shape)):
+            for i in prange(len(out)):
+                out[i] = fn(in_storage[i])
+            return
+
         # Calculate total size
         size = 1
         for i in range(len(out_shape)):
