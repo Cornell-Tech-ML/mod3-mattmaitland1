@@ -169,9 +169,11 @@ def tensor_map(
         in_strides: Strides,
     ) -> None:
         # Fast path for aligned tensors
-        if (len(out_strides) == len(in_strides) and 
-            np.array_equal(out_strides, in_strides) and 
-            np.array_equal(out_shape, in_shape)):
+        if (
+            len(out_strides) == len(in_strides)
+            and np.array_equal(out_strides, in_strides)
+            and np.array_equal(out_shape, in_shape)
+        ):
             for i in prange(len(out)):
                 out[i] = fn(in_storage[i])
             return
