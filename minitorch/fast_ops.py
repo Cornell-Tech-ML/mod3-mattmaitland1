@@ -187,7 +187,7 @@ def tensor_map(
             for i in prange(len(out)):
                 out[i] = fn(in_storage[i])
 
-    return njit(parallel=True)(_map)  # type: ignore
+    return njit(_map, parallel=True)  # type: ignore
 
 
 def tensor_zip(
@@ -248,7 +248,7 @@ def tensor_zip(
             for i in prange(len(out)):
                 out[i] = fn(a_storage[i], b_storage[i])
 
-    return njit(parallel=True)(_zip)  # type: ignore
+    return njit(_zip, parallel=True)  # type: ignore
 
 
 def tensor_reduce(
@@ -294,7 +294,7 @@ def tensor_reduce(
                 j += step
             out[o] = accum
 
-    return njit(parallel=True)(_reduce)  # type: ignore
+    return njit(_reduce, parallel=True)  # type: ignore
 
 
 def _tensor_matrix_multiply(
