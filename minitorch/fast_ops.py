@@ -360,4 +360,4 @@ def _tensor_matrix_multiply(
                 out[out_position] = acc
 
 
-tensor_matrix_multiply = njit(parallel=True, fastmath=True)(_tensor_matrix_multiply)  # type: ignore
+tensor_matrix_multiply = njit(_tensor_matrix_multiply, parallel=True, fastmath=True)  # type: ignore
