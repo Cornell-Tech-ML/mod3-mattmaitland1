@@ -176,8 +176,8 @@ def tensor_map(
             or (out_shape != in_shape).any()
         ):
             for i in prange(len(out)):
-                out_index: Index = np.emtpy(MAX_DIMS, np.int32)
-                in_index: Index = np.emtpy(MAX_DIMS, np.int32)
+                out_index: Index = np.empty(MAX_DIMS, np.int32)
+                in_index: Index = np.empty(MAX_DIMS, np.int32)
                 to_index(i, out_shape, out_index)
                 broadcast_index(out_index, out_shape, in_shape, in_index)
                 o = index_to_position(out_index, out_strides)
