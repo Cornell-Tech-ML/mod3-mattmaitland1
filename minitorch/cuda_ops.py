@@ -241,8 +241,8 @@ def tensor_zip(
 
 
 def _sum_practice(out: Storage, a: Storage, size: int) -> None:
-    r"""A practice sum kernel to prepare for reduce.
-
+    """
+    This is a practice sum kernel to prepare for reduce.
     Given an array of length $n$ and out of size $n // \text{blockDIM}$
     it should sum up each blockDim values into an out cell.
 
@@ -255,11 +255,9 @@ def _sum_practice(out: Storage, a: Storage, size: int) -> None:
     Note: Each block must do the sum using shared memory!
 
     Args:
-    ----
         out (Storage): storage for `out` tensor.
         a (Storage): storage for `a` tensor.
         size (int):  length of a.
-
     """
     BLOCK_DIM = 32
 
@@ -276,7 +274,7 @@ def _sum_practice(out: Storage, a: Storage, size: int) -> None:
 
     if i < size:
         for j in [1, 2, 4, 8, 16]:
-            if pos % (2 * j) == 0:
+            if pos % (j * 2) == 0:
                 cache[pos] += cache[pos + j]
                 cuda.syncthreads()
         if pos == 0:
@@ -328,8 +326,9 @@ def tensor_reduce(
         BLOCK_DIM = 1024
         cache = cuda.shared.array(BLOCK_DIM, numba.float64)
         out_index = cuda.local.array(MAX_DIMS, numba.int32)
-        pos = cuda.threadIdx.x
         out_pos = cuda.blockIdx.x
+        pos = cuda.threadIdx.x
+        cache[pos] = reduce_value
 
         if out_pos < out_size:
             to_index(out_pos, out_shape, out_index)
@@ -343,14 +342,14 @@ def tensor_reduce(
                 x = 0
                 while 2**x < BLOCK_DIM:
                     j = 2**x
-                    if pos % (2 * j) == 0:
+                    if pos % (j * 2) == 0:
                         cache[pos] = fn(cache[pos], cache[pos + j])
                         cuda.syncthreads()
                     x += 1
                 if pos == 0:
                     out[o] = cache[0]
 
-    return jit(_reduce)  # type: ignore
+    return cuda.jit()(_reduce)
 
 
 def _mm_practice(out: Storage, a: Storage, b: Storage, size: int) -> None:
