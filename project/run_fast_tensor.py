@@ -29,12 +29,11 @@ class Network(minitorch.Module):
         self.layer3 = Linear(hidden, 1, backend)
 
     def forward(self, x):
-        # Hidden layer 1 with ReLU
-        h1 = self.layer1.forward(x).relu()
-        # Hidden layer 2 with ReLU
-        h2 = self.layer2.forward(h1).relu()
-        # Output layer
-        return self.layer3.forward(h2).sigmoid()
+        # ASSIGN3.5
+        h = self.layer1.forward(x).relu()
+        h = self.layer2.forward(h).relu()
+        return self.layer3.forward(h).sigmoid()
+        # END ASSIGN3.5
 
 
 class Linear(minitorch.Module):
@@ -47,10 +46,10 @@ class Linear(minitorch.Module):
         self.out_size = out_size
 
     def forward(self, x):
-        # Matrix multiply with weights
-        out = x @ self.weights.value
-        # Add bias to each output
-        return out + self.bias.value
+        # ASSIGN3.5
+        batch, in_size = x.shape
+        return x.view(batch, in_size) @ self.weights.value + self.bias.value
+        # END ASSIGN3.5
 
 
 class FastTrain:
